@@ -2,3 +2,4 @@ ultralytics
 Flask
 python-dotenv
 Gunicorn
+numpy
