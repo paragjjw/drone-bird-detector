@@ -103,7 +103,7 @@ def predict_img():
                 frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
                 fps = cap.get(cv2.CAP_PROP_FPS)
                 # Define the codec and create VideoWriter Object
-                fourcc = 0x00000021
+                fourcc = cv2.VideoWriter_fourcc(*"mp4v")
                 out = cv2.VideoWriter(
                     'static/videos/predict/output.mp4', fourcc, fps, (frame_width, frame_height))
 
