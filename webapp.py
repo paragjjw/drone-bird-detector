@@ -150,4 +150,4 @@ if __name__ == "__main__":
     # model = torch.hub.load('.', 'custom','best_246.pt', source='local')
     # model.eval()
     # debug=True causes Restarting with stat
-    app.run(host="0.0.0.0", port=args.port, debug=True)
+    app.run(host="0.0.0.0", port=args.port, debug=False)
