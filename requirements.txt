@@ -1,4 +1,4 @@
 ultralytics
 Flask
-dotenv
+python-dotenv
 Gunicorn
