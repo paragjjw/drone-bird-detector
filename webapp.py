@@ -1,37 +1,19 @@
-"""
-Simple app to upload an image via a web form 
-and view the inference results on the image in the browser.
-"""
+from ultralytics import YOLO
 import argparse
-import io
-from PIL import Image
-import datetime
-
-import torch
 import cv2
-import numpy as np
-import tensorflow as tf
-from re import DEBUG, sub
-from flask import Flask, render_template, request, redirect, send_file, url_for, Response
-from werkzeug.utils import secure_filename, send_from_directory
+from flask import Flask, render_template, request, flash
 import os
-import subprocess
-from subprocess import Popen
-import re
-import requests
 import shutil
-import time
+from dotenv import load_dotenv
 
+load_dotenv()
 app = Flask(__name__)
-
-
-
+app.secret_key = os.getenv("SECRET_KEY")
 
 
 @app.route("/")
 def hello_world():
     return render_template('index.html')
-
 
 # function for accessing rtsp stream
 # @app.route("/rtsp_feed")
@@ -50,93 +32,122 @@ def hello_world():
 
 # function to get the frames from video (output video)
 
-def get_frame():
-    folder_path = 'runs/detect'
-    subfolders = [f for f in os.listdir(folder_path) if os.path.isdir(os.path.join(folder_path, f))]    
-    latest_subfolder = max(subfolders, key=lambda x: os.path.getctime(os.path.join(folder_path, x)))
-    filename = predict_img.imgpath    
-    image_path = folder_path+'/'+latest_subfolder+'/'+filename    
-    video = cv2.VideoCapture(image_path)  # detected video path
-    #video = cv2.VideoCapture("video.mp4")
-    while True:
-        success, image = video.read()
-        if not success:
-            break
-        ret, jpeg = cv2.imencode('.jpg', image)   
-        yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\n\r\n' + jpeg.tobytes() + b'\r\n\r\n')   
-        time.sleep(0.1)  #control the frame rate to display one frame every 100 milliseconds: 
+# def get_frame():
+#     mp4_files = os.getcwd()+'/output.mp4'
+#     video = cv2.VideoCapture(mp4_files)  # detected video path
+
+#     while True:
+#         success, image = video.read()
+#         if not success:
+#             break
+
+#         ret, jpeg = cv2.imencode('.jpg', image)
+#         yield (b'--frame\r\n'
+#                b'Content-Type: image/jpeg\r\n\r\n' + jpeg.tobytes() + b'\r\n\r\n')
+#         # control the frame rate to display one frame every 100 milliseconds:
+#         time.sleep(0.1)
 
 
 # function to display the detected objects video on html page
-@app.route("/video_feed")
-def video_feed():
-    return Response(get_frame(),
-                    mimetype='multipart/x-mixed-replace; boundary=frame')
+# @app.route("/video_feed")
+# def video_feed():
+#     return Response(get_frame(),
+#                     mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
+# The display function is used to serve the image or video from the folder_path directory.
+# @app.route('/<path:filename>')
+# def display(filename):
+#     folder_path = 'runs/detect/predict'
+#     file_extension = filename.rsplit('.', 1)[1].lower()
+#     environ = request.environ
+#     if file_extension == 'jpg':
+#         return send_from_directory(folder_path, filename, environ)
+#     else:
+#         return "Invalid file format"
 
-#The display function is used to serve the image or video from the folder_path directory.
-@app.route('/<path:filename>')
-def display(filename):
-    folder_path = 'runs/detect'
-    subfolders = [f for f in os.listdir(folder_path) if os.path.isdir(os.path.join(folder_path, f))]    
-    latest_subfolder = max(subfolders, key=lambda x: os.path.getctime(os.path.join(folder_path, x)))    
-    directory = folder_path+'/'+latest_subfolder
-    print("printing directory: ",directory)  
-    filename = predict_img.imgpath
-    file_extension = filename.rsplit('.', 1)[1].lower()
-    #print("printing file extension from display function : ",file_extension)
-    environ = request.environ
-    if file_extension == 'jpg':      
-        return send_from_directory(directory,filename,environ)
 
-    elif file_extension == 'mp4':
-        return render_template('index.html')
-
-    else:
-        return "Invalid file format"
-
-    
 @app.route("/", methods=["GET", "POST"])
 def predict_img():
     if request.method == "POST":
-        if 'file' in request.files:
+        if 'file' in request.files and request.files['file']:
             f = request.files['file']
             basepath = os.path.dirname(__file__)
-            filepath = os.path.join(basepath,'uploads',f.filename)
+            filepath = os.path.join(basepath, 'uploads', f.filename)
             print("upload folder is ", filepath)
             f.save(filepath)
-            
-            predict_img.imgpath = f.filename
-            print("printing predict_img :::::: ", predict_img)
 
-            file_extension = f.filename.rsplit('.', 1)[1].lower()    
+            # predict_img.imgpath = f.filename
+            # print("printing predict_img :::::: ", predict_img)
+
+            file_extension = f.filename.rsplit('.', 1)[1].lower()
+
+            model = YOLO('best.pt')  # Initializing the yolov8 pretrained model
             if file_extension == 'jpg':
-                process = Popen(["python", "detect.py", '--source', filepath, "--weights","best_246.pt"], shell=True)
-                process.wait()
-                
-                
+                # Perform the detection
+                if(os.path.exists(basepath+"/static/images/predict")):
+                    shutil.rmtree(basepath+"/static/images/predict")
+                detections = model.predict(
+                    filepath, save=True, project="static/images", name="predict", imgsz=(640, 640))
+                flash("File uploaded successfully")
+                return render_template('index.html', image_path="images/predict/"+f.filename)
+
             elif file_extension == 'mp4':
-                process = Popen(["python", "detect.py", '--source', filepath, "--weights","best_246.pt"], shell=True)
-                process.communicate()
-                process.wait()
+                # if(os.path.exists("/static/videos/predict/output.mp4")):
+                #     shutil.rmtree(basepath+"/static/videos/predict")
+                video_path = filepath
+                cap = cv2.VideoCapture(video_path)  # Capture video using cv2
 
-            
-    folder_path = 'runs/detect'
-    subfolders = [f for f in os.listdir(folder_path) if os.path.isdir(os.path.join(folder_path, f))]    
-    latest_subfolder = max(subfolders, key=lambda x: os.path.getctime(os.path.join(folder_path, x)))    
-    image_path = folder_path+'/'+latest_subfolder+'/'+f.filename 
-    return render_template('index.html', image_path=image_path)
-    #return "done"
+                # get video dimensions
+                frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                fps = cap.get(cv2.CAP_PROP_FPS)
+                # Define the codec and create VideoWriter Object
+                fourcc = 0x00000021
+                out = cv2.VideoWriter(
+                    'static/videos/predict/output.mp4', fourcc, fps, (frame_width, frame_height))
 
+                while cap.isOpened():
+                    ret, frame = cap.read()
+                    if not ret:
+                        break
+
+                    # retrieve YOLOv8 detection for the current video frame
+                    results = model(frame)
+                    print(results)
+                    cv2.waitKey(1)
+
+                    res_plotted = results[0].plot()
+                    # cv2.imshow("result", frame)
+
+                    # write the frame to the output video
+                    out.write(res_plotted)
+
+                    if(cv2.waitKey(1) == ord('q')):
+                        break
+                out.release()
+                cap.release()
+                cv2.destroyAllWindows()
+                flash("File uploaded successfully")
+                return render_template("index.html", video_path='videos/predict/output.mp4')
+                # return send_from_directory("static/videos/predict", 'output.mp4', request.environ, conditional=True)
+                # return render_template('index.html', video_path="videos/predict/output.mp4")
+            else:
+                flash("Invalid file format!")
+                return render_template("index.html")
+        else:
+            flash("Please upload a file!")
+            return render_template("index.html")
+    else:
+        return render_template("index.html")
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Flask app exposing yolov5 models")
+    parser = argparse.ArgumentParser(
+        description="Flask app exposing yolov5 models")
     parser.add_argument("--port", default=5000, type=int, help="port number")
     args = parser.parse_args()
-    model = torch.hub.load('.', 'custom','best_246.pt', source='local')
-    model.eval()
-    app.run(host="0.0.0.0", port=args.port)  # debug=True causes Restarting with stat
-
+    # model = torch.hub.load('.', 'custom','best_246.pt', source='local')
+    # model.eval()
+    # debug=True causes Restarting with stat
+    app.run(host="0.0.0.0", port=args.port, debug=True)

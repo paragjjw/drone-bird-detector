@@ -8,12 +8,19 @@
 .container {
   text-align: center;
 }
-
+body{
+  width:100vw;
+  height:100vh;
+  background-image: url("{{url_for('static',filename='images/bg_img2.png')}}");
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-color: #13131f;
+}
 .box {
   display: inline-block;
   width: 30%;
   
-  background-color: white;
+  background-color: #ffffffa1;
   margin: 10px;
 }
 </style>
@@ -29,73 +36,82 @@
         }
       }
     </style>
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="{{url_for('static',filename='styles/style.css')}}">
 
-    <title>yolov5 object detection</title>
+    <title>Drone Detection using yolov8</title>
   </head>
   <body >
   <div class="container">
    <div class="box">
-    <form class="form-signin" method=post enctype=multipart/form-data name="form1">
-        <img class="mb-4" src="/static/pytorch.png" alt="" width="72">
+    <form class="form-signin" method="post" enctype=multipart/form-data name="form1" action="#">
+        <img class="mb-4 logo" src="{{url_for('static',filename='images/logo.png')}}" alt="" width="72">
         <h1 class="h3 mb-3 font-weight-normal">Upload any image or video</h1>
      <input type="file" name="file" class="form-control-file" id="inputfile" >
 
         <br/>
 		    
         <button class="btn btn-lg btn-primary btn-block" type="submit">Upload</button>
-  <p class="mt-5 mb-3 text-muted">Built using Pytorch & Flask</p>
+  <p class="mt-3 mb-3 text-muted">Built using Ultralytics & Flask</p>
     </form>
 </div>
    <br>  
-		
-
-		 
-	
+  
     <script src="//code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
     <script src="//cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.6/umd/popper.min.js" integrity="sha384-wHAiFfRlMFy6i5SRaxvfOCifBUQy1xHdJ/yoi7FRNXMRBu5WHdZYu1hA6ZOblgut" crossorigin="anonymous"></script>
     <script src="//stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js" integrity="sha384-B0UglyR+jN6CkvvICOB2joaf5I4l3gm9GU6Hc1og6Ls7i6U/mkkaduKaBhlAXv9k" crossorigin="anonymous"></script>
 
 
 <!-- detected video display using opencv-->
-<img id="my-video-image" src="{{ url_for('video_feed') }}" style="height:640; width:640px" />
-
+{% if video_path %}
+<h1 style="color:white; margin-top: 10px;">Result of Prediction:</h1>
+<video width="640" height="640" controls preload="metadata">
+  <source src="{{ url_for('static', filename=video_path) }}" type="video/mp4">
+</video>
+{%endif%}
 
 <!-- detected image display -->
-<img id="my-image" style="display: none;" src="{{ url_for('display', filename=image_path) }}" style="height:640; width:640px"/> 
-
+{%if image_path%}
+<h1 style="color:white; margin-top: 10px;">Result of Prediction:</h1>
+<img id="my-image" style="display: none;" src="{{ url_for('static', filename=image_path) }}" style="height:640; width:640px"/> 
+{%endif%}
 <script>
 document.getElementById("my-image").onload = function() {
   this.style.display = "block";
 };
 </script>
+    {% with
+messages=get_flashed_messages()%} {%if messages %} {% for msg in messages%}
+<script>
+  alert("{{msg}}");
+</script>
+{%endfor%} {%endif%} {%endwith%}
 
 
 
 
 
- <div class="box">
+ 
 <!-- script for opening a webcam and performing detections -->
+<!-- <div class="box">
 <button id="start-webcam" onclick="startWebcam()" class="btn btn-lg btn-primary btn-block">Start Webcam</button>
 <script>
 function startWebcam() {
   window.location.href = "/webcam_feed";
 }
 </script>
+ </div> -->
 <!-- webcam ends here -->
 
- </div>
-  <div class="box">
-
 <!-- script for opening a rtsp and performing detections -->
+  <!-- <div class="box">
 <button id="start-rtsp" onclick="startrtsp()" class="btn btn-lg btn-primary btn-block">Start RTSP Stream</button>
 <script>
 function startrtsp() {
   window.location.href = "/rtsp_feed";
 }
 </script>
+ </div> -->
 <!-- rtsp ends here -->
- </div>
  </div>
   </body>
 </html>
